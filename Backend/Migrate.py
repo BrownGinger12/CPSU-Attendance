@@ -1,0 +1,5 @@
+from Migrations.Students_Table_Migration import create_students_table
+from Migrations.Attendance_Record_Table_Migration import create_attendance_records_table
+
+create_students_table()
+create_attendance_records_table()
