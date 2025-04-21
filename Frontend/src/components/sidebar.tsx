@@ -2,10 +2,12 @@ import { useState } from "react";
 import { AiOutlineDashboard} from "react-icons/ai";
 import { FaUsers, FaUserCheck} from "react-icons/fa";
 import { BiTask } from "react-icons/bi";
+import { IoMdExit } from "react-icons/io";
 
 
 interface SidebarProps {
   isExpanded: boolean;
+  onLogoutClick: () => void;
   onChangeState: (path: string) => void;
 }
 
@@ -36,6 +38,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onChangeState }) => {
       icon: <BiTask size={24} />,
       label: "Events",
       path: "/events",
+    },
+    {
+      icon: <IoMdExit size={24} />,
+      label: "Logout",
+      path: "/logout",
     }
   ];
 
