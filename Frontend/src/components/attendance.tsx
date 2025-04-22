@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "../client/AxiosClient";
+import { collection, onSnapshot } from "firebase/firestore";
+import { firestore } from "../firebase/firebase";
+import Students from "./students";
 
 interface Student {
   id: string;
   name: string;
-  timeIn: string;
-  timeOut: string | null;
-  eventId: number;
+  logIn: string;
+  logOut: string | null;
 }
 
 interface Event {
   id: number;
   event_name: string;
+  event_date: string;
 }
 
 const Attendance: React.FC = () => {
@@ -19,56 +22,13 @@ const Attendance: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
 
   // Sample data for students
-  const [allStudents, setAllStudents] = useState<Student[]>([
-    {
-      id: "12345",
-      name: "John Doe",
-      timeIn: "08:30 AM",
-      timeOut: "04:15 PM",
-      eventId: 1,
-    },
-    {
-      id: "12346",
-      name: "Jane Smith",
-      timeIn: "08:45 AM",
-      timeOut: null,
-      eventId: 1,
-    },
-    {
-      id: "12347",
-      name: "Alex Johnson",
-      timeIn: "09:00 AM",
-      timeOut: "03:30 PM",
-      eventId: 1,
-    },
-    {
-      id: "12348",
-      name: "Sarah Williams",
-      timeIn: "08:15 AM",
-      timeOut: "05:00 PM",
-      eventId: 2,
-    },
-    {
-      id: "12349",
-      name: "Michael Brown",
-      timeIn: "09:30 AM",
-      timeOut: null,
-      eventId: 2,
-    },
-    {
-      id: "12350",
-      name: "Emily Davis",
-      timeIn: "08:00 AM",
-      timeOut: "04:00 PM",
-      eventId: 3,
-    },
-  ]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
 
   // State for filtered students
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
 
   // State for selected event
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const fetchEvents = async () => {
     try {
@@ -84,21 +44,30 @@ const Attendance: React.FC = () => {
     fetchEvents();
   }, []);
   // Filter students when event selection changes
-  useEffect(() => {
-    if (selectedEventId === null) {
-      setFilteredStudents(allStudents);
-    } else {
-      setFilteredStudents(
-        allStudents.filter((student) => student.eventId === selectedEventId)
-      );
-    }
-  }, [selectedEventId, allStudents]);
 
   // Handle event selection change
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    setSelectedEventId(value === "" ? null : parseInt(value));
+    setSelectedEventId(value === "" ? null : value);
   };
+
+  useEffect(() => {
+    if (!selectedEventId) return;
+
+    const unsubscribe = onSnapshot(
+      collection(firestore, `Events/${selectedEventId}/Attendance`),
+      (snapshot: any) => {
+        const arr: any[] = [];
+        snapshot.docs.forEach((doc: any) => {
+          arr.push({ id: doc.id, ...doc.data() });
+        });
+        console.log("Fetched students:", arr);
+        setAllStudents(arr);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [selectedEventId]);
 
   // Format the time for display
   const formatTime = (timeString: string | null) => {
@@ -126,8 +95,11 @@ const Attendance: React.FC = () => {
           value={selectedEventId || ""}
           onChange={handleEventChange}
         >
+          <option value="" disabled>
+            -- Select an Event --
+          </option>
           {events.map((event) => (
-            <option key={event.id} value={event.id}>
+            <option key={event.id} value={event.event_date}>
               {event.event_name}
             </option>
           ))}
@@ -154,16 +126,16 @@ const Attendance: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => (
+            {allStudents.length > 0 ? (
+              allStudents.map((student) => (
                 <tr
                   key={student.id}
                   className="border-b border-gray-200 hover:bg-gray-50"
                 >
                   <td className="py-3 px-4">{student.id}</td>
                   <td className="py-3 px-4">{student.name}</td>
-                  <td className="py-3 px-4">{student.timeIn}</td>
-                  <td className="py-3 px-4">{formatTime(student.timeOut)}</td>
+                  <td className="py-3 px-4">{student.logIn}</td>
+                  <td className="py-3 px-4">{formatTime(student.logOut)}</td>
                 </tr>
               ))
             ) : (
@@ -182,22 +154,19 @@ const Attendance: React.FC = () => {
         <div className="bg-blue-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-blue-700">Total Present</h3>
           <p className="text-2xl font-bold text-blue-900">
-            {filteredStudents.length}
+            {allStudents.length}
           </p>
         </div>
         <div className="bg-green-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-green-700">Time In</h3>
           <p className="text-2xl font-bold text-green-900">
-            {filteredStudents.length}
+            {allStudents.length}
           </p>
         </div>
         <div className="bg-yellow-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-yellow-700">Time Out</h3>
           <p className="text-2xl font-bold text-yellow-900">
-            {
-              filteredStudents.filter((student) => student.timeOut === null)
-                .length
-            }
+            {allStudents.filter((student) => student.logOut !== "").length}
           </p>
         </div>
       </div>
