@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { AiOutlineDashboard} from "react-icons/ai";
-import { FaUsers, FaUserCheck} from "react-icons/fa";
+import { AiOutlineDashboard } from "react-icons/ai";
+import { FaUsers, FaUserCheck } from "react-icons/fa";
 import { BiTask } from "react-icons/bi";
 import { IoMdExit } from "react-icons/io";
-
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -32,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onChangeState }) => {
     {
       icon: <FaUserCheck size={24} />,
       label: "Present Records",
-      path: "/attendance"
+      path: "/attendance",
     },
     {
       icon: <BiTask size={24} />,
@@ -43,13 +42,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onChangeState }) => {
       icon: <IoMdExit size={24} />,
       label: "Logout",
       path: "/logout",
-    }
+    },
   ];
 
   const [activeItem, setActiveItem] = useState<string>("/dashboard");
 
   const handleItemClick = (path: string): void => {
-    setActiveItem(path);
+    if (path !== "/logout") setActiveItem(path);
   };
 
   return (
@@ -64,7 +63,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onChangeState }) => {
             isExpanded ? "items-start" : "items-center"
           }`}
         >
-        
           {menuItems.map((item) => (
             <button
               key={item.path}

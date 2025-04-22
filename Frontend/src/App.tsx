@@ -1,15 +1,16 @@
 // src/App.jsx
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import MainPage from "./components/mainpage";
+import Login from "./components/login";
+import { useAuth } from "./context/AuthContext";
 // Import other pages as needed
 
 function App() {
+  const { userId } = useAuth();
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-      </Routes>
-    </Router>
+    <>
+      {userId === null && <Login />}
+      {userId && <MainPage />}
+    </>
   );
 }
 

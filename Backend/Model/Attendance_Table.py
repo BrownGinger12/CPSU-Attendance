@@ -9,6 +9,12 @@ class AttendanceTable(BaseModel):
     
     def create(self):
         try:
+
+            checkIfExists = AttendanceTable.get(self.event_name)
+
+            if checkIfExists["statusCode"] == 200:
+                return {"statusCode": 400, "message": "Attendance Record already exists"}
+            
             response = query(
                 "INSERT INTO attendance_records (event_name, event_date) VALUES (%s, %s)",
                 (self.event_name, self.event_date)
@@ -16,12 +22,12 @@ class AttendanceTable(BaseModel):
 
             if response["statusCode"] == 200:
                 create_table = query(f"""
-                                CREATE TABLE IF NOT EXISTS {self.event_name} (
+                                CREATE TABLE IF NOT EXISTS {self.event_name.replace(" ", "_")} (
                                     id INT AUTO_INCREMENT PRIMARY KEY,
                                     student_id VARCHAR(255),
                                     name VARCHAR(255),
-                                    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                    logout_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    login_time VARCHAR(255) NULL,
+                                    logout_time VARCHAR(255) NULL,
                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                 )
                                 """)
@@ -44,10 +50,10 @@ class AttendanceTable(BaseModel):
             if checkIfExists["statusCode"] != 200:
                 return {"statusCode": 405, "message": "Attendance Record not found"}
             
-            response = query("DELETE FROM attendance_records WHERE event_name = %s", (event_name,))
+            response = query("DELETE FROM attendance_records WHERE event_name = %s", (event_name.replace("%", " "),))
 
             if response["statusCode"] == 200:
-                delete_table = query(f"DROP TABLE IF EXISTS {event_name}")
+                delete_table = query(f"DROP TABLE IF EXISTS {event_name.replace(' ', '_')}")
                     
                 if delete_table["statusCode"] != 200:
                     return {"statusCode": 500, "message": "Failed to delete records table"}

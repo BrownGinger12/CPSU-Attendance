@@ -1,43 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
-
+import { apiClient } from "../client/AxiosClient";
 
 interface Event {
   id: number;
-  eventName: string;
-  eventDate: string;
+  event_name: string;
+  event_date: string;
 }
 
 const Events: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([
-    { id: 1, eventName: "Conference", eventDate: "2025-05-15" },
-    { id: 2, eventName: "Team Building", eventDate: "2025-06-20" },
-    { id: 3, eventName: "Product Launch", eventDate: "2025-07-10" },
-  ]);
+  const [events, setEvents] = useState<Event[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState<{
-    eventName: string;
-    eventDate: string;
+    event_name: string;
+    event_date: string;
   }>({
-    eventName: "",
-    eventDate: "",
+    event_name: "",
+    event_date: "",
   });
 
+  const addEvent = async (event: Event) => {
+    try {
+      const response = await apiClient.post("/create_record", event);
+      alert("Event added successfully!");
+      console.log("Event added:", response.data);
+    } catch (error) {
+      alert("Error adding event. Please try again.");
+      console.error("Error adding event:", error);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await apiClient.get("/attendance_records");
+      setEvents(response.data.attendance_record.data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   const handleAddEvent = () => {
-    if (newEvent.eventName && newEvent.eventDate) {
+    if (newEvent.event_name && newEvent.event_date) {
       const newId =
         events.length > 0
           ? Math.max(...events.map((event) => event.id)) + 1
           : 1;
       setEvents([...events, { id: newId, ...newEvent }]);
-      setNewEvent({ eventName: "", eventDate: "" });
+      addEvent({ id: newId, ...newEvent });
+      setNewEvent({ event_name: "", event_date: "" });
       setIsModalOpen(false);
     }
   };
 
-  const handleDeleteEvent = (id: number) => {
-    setEvents(events.filter((event) => event.id !== id));
+  const deleteEvent = async (event_name: string) => {
+    try {
+      await apiClient.delete(`/attendance_record/${event_name}`);
+      alert("Event deleted successfully!");
+    } catch (error) {
+      alert("Error deleting event. Please try again.");
+      console.error("Error deleting event:", error);
+    }
+  };
+
+  const handleDeleteEvent = (event_name: string) => {
+    deleteEvent(event_name);
+    setEvents(events.filter((event) => event.event_name !== event_name));
   };
 
   const formatDate = (dateString: string) => {
@@ -61,10 +93,9 @@ const Events: React.FC = () => {
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white py-2 px-4 rounded-lg transition-colors"
         >
-         <FaPlus /> Add New Event
+          <FaPlus /> Add New Event
         </button>
       </div>
-
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
@@ -73,7 +104,7 @@ const Events: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Events
               </th>
-             <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Date of Event
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
@@ -87,8 +118,8 @@ const Events: React.FC = () => {
                 key={event.id}
                 className="border-b border-gray-200 hover:bg-gray-50"
               >
-                <td className="py-3 px-4">{event.eventName}</td>
-                <td className="py-3 px-4">{formatDate(event.eventDate)}</td>
+                <td className="py-3 px-4">{event.event_name}</td>
+                <td className="py-3 px-4">{formatDate(event.event_date)}</td>
                 <td className="py-3 px-4">
                   <button
                     onClick={() => setEventToDelete(event)}
@@ -109,7 +140,6 @@ const Events: React.FC = () => {
           </tbody>
         </table>
       </div>
-
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -126,9 +156,9 @@ const Events: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={newEvent.eventName}
+                  value={newEvent.event_name}
                   onChange={(e) =>
-                    setNewEvent({ ...newEvent, eventName: e.target.value })
+                    setNewEvent({ ...newEvent, event_name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter event name"
@@ -140,9 +170,9 @@ const Events: React.FC = () => {
                 </label>
                 <input
                   type="date"
-                  value={newEvent.eventDate}
+                  value={newEvent.event_date}
                   onChange={(e) =>
-                    setNewEvent({ ...newEvent, eventDate: e.target.value })
+                    setNewEvent({ ...newEvent, event_date: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -151,7 +181,7 @@ const Events: React.FC = () => {
             <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 rounded-b-lg">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="border border-red-500 hover:bg-red-500 text-red-500 hover:text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+                className="border border-red-500 hover:bg-red-500 text-red-500 hover:text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
               >
                 Cancel
               </button>
@@ -164,44 +194,45 @@ const Events: React.FC = () => {
             </div>
           </div>
         </div>
-      )};
-
-{/* Delete Modal */}
-{eventToDelete && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-      <div className="border-b px-6 py-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Confirm Deletion
-        </h3>
-      </div>
-      <div className="p-6 space-y-4">
-        <p>
-          Are you sure you want to delete the event{" "}
-          <span className="font-semibold">{eventToDelete.eventName}</span>?
-        </p>
-      </div>
-      <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
-        <button
-          onClick={() => setEventToDelete(null)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => {
-            handleDeleteEvent(eventToDelete.id);
-            setEventToDelete(null);
-          }}
-          className="px-4 py-2 bg-red-600 rounded-md text-sm font-medium text-white hover:bg-red-700"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
+      {/* Delete Modal */}
+      {eventToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Confirm Deletion
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p>
+                Are you sure you want to delete the event{" "}
+                <span className="font-semibold">
+                  {eventToDelete.event_name}
+                </span>
+                ?
+              </p>
+            </div>
+            <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+              <button
+                onClick={() => setEventToDelete(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDeleteEvent(eventToDelete.event_name);
+                  setEventToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 rounded-md text-sm font-medium text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

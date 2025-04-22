@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [keepSignedIn, setKeepSignedIn] = useState(false);
+
+  const { setUserId } = useAuth();
 
   return (
     <div className="h-screen w-full bg-gray-100 flex justify-center items-center p-4">
-      <div className="w-[400px] h-[500px] bg-white rounded-md shadow-xl shadow-gray-400 border p-6">
+      <div className="w-[400px] h-[400px] bg-white rounded-md shadow-xl shadow-gray-400 border p-6">
         <div className="flex justify-start items-center gap-[20px]">
           <img
             src="logo.jpg"
@@ -49,22 +51,16 @@ const Login = () => {
             />
           </div>
 
-          <div className="mb-4 flex items-center">
-            <input
-              type="checkbox"
-              checked={keepSignedIn}
-              onChange={(e) => setKeepSignedIn(e.target.checked)}
-              className="mr-2"
-              id="keepSignedIn"
-            />
-            <label htmlFor="keepSignedIn" className="text-sm">
-              Keep me signed in
-            </label>
-          </div>
-
           <button
             type="submit"
             className="w-full bg-green-700 hover:bg-green-800 text-white py-2 rounded-lg"
+            onClick={() => {
+              if (username === "admin" && password === "admin") {
+                setUserId("test123567");
+              } else {
+                alert("Invalid Credentials");
+              }
+            }}
           >
             Log-in
           </button>
@@ -72,6 +68,6 @@ const Login = () => {
       </div>
     </div>
   );
-}
+};
 
-export default Login
+export default Login;
