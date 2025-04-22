@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaUserPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { apiClient } from "../client/AxiosClient";
 
 // Define TypeScript interfaces
 interface Student {
@@ -9,9 +10,9 @@ interface Student {
   course: string;
   section: string;
   address: string;
-  birthdate: string;
+  birth_date: string;
   email: string;
-  phoneNumber: number;
+  phone_number: number;
   gender: "Male" | "Female";
 }
 
@@ -25,9 +26,9 @@ const Students: React.FC = () => {
     course: "",
     section: "",
     address: "",
-    birthdate: "",
+    birth_date: "",
     email: "",
-    phoneNumber: 0,
+    phone_number: 0,
     gender: "Male",
   });
   // State for editing mode
@@ -35,20 +36,21 @@ const Students: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
 
   // Sample student data
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: 1,
-      student_id: "12345",
-      name: "John Doe",
-      course: "Computer Engineering",
-      section: "A",
-      address: "123 Main St, Anytown",
-      birthdate: "1999-05-15",
-      email: "zYH4o@example.com",
-      phoneNumber: 1234567890,
-      gender: "Male",
-    },
-  ]);
+  const [students, setStudents] = useState<Student[]>([]);
+
+  const fetchStudents = async () => {
+    try {
+      const response = await apiClient.get("/students");
+      setStudents(response.data.students.data);
+      console.log("Fetched students:", response.data.students.data);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   // Handle input changes
   const handleChange = (
@@ -59,6 +61,28 @@ const Students: React.FC = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  const addStudent = async (student: Student) => {
+    try {
+      const response = await apiClient.post("/register", student);
+      alert("Student added successfully!");
+      console.log("Student added:", response.data);
+    } catch (error) {
+      alert("Error adding student. Please try again.");
+      console.error("Error adding student:", error);
+    }
+  };
+
+  const updateStudent = async (student: Student) => {
+    try {
+      const response = await apiClient.put("/student", student);
+      alert("Student updated successfully!");
+      console.log("Student updated:", response.data);
+    } catch (error) {
+      alert("Error updating student. Please try again.");
+      console.error("Error updating student:", error);
+    }
   };
 
   // Handle form submission
@@ -72,15 +96,21 @@ const Students: React.FC = () => {
           student.id === editId ? { ...formData, id: editId } : student
         )
       );
+
+      const studentData = { ...formData, id: editId };
+      updateStudent(studentData);
       setIsEditing(false);
       setEditId(null);
     } else {
       // Add new student
-      const newStudent: Student = {
+      const newStudent = {
         ...formData,
         id:
           students.length > 0 ? Math.max(...students.map((s) => s.id)) + 1 : 1,
       };
+      console.log("New student:", newStudent);
+
+      addStudent(newStudent);
       setStudents([...students, newStudent]);
     }
 
@@ -91,9 +121,9 @@ const Students: React.FC = () => {
       address: "",
       course: "",
       section: "",
-      birthdate: "",
+      birth_date: "",
       email: "",
-      phoneNumber: 0,
+      phone_number: 0,
       gender: "Male",
     });
     setShowModal(false);
@@ -109,17 +139,31 @@ const Students: React.FC = () => {
       course: student.course,
       section: student.section,
       address: student.address,
-      birthdate: student.birthdate,
+      birth_date: student.birth_date,
       email: student.email,
-      phoneNumber: student.phoneNumber,
+      phone_number: student.phone_number,
       gender: student.gender,
     });
     setShowModal(true);
   };
 
+  const deleteStudent = async (student_id: string) => {
+    try {
+      const response = await apiClient.delete(`/student/${student_id}`);
+      alert("Student deleted successfully!");
+      console.log("Student deleted:", response.data);
+    } catch (error) {
+      alert("Error deleting student. Please try again.");
+      console.error("Error deleting student:", error);
+    }
+  };
+
   // Handle delete student
-  const handleDelete = (id: number) => {
-    setStudents(students.filter((student) => student.id !== id));
+  const handleDelete = (student_id: string) => {
+    deleteStudent(student_id);
+    setStudents(
+      students.filter((student) => student.student_id !== student_id)
+    );
   };
 
   // Format date for display
@@ -167,9 +211,9 @@ const Students: React.FC = () => {
               course: "",
               section: "",
               address: "",
-              birthdate: "",
+              birth_date: "",
               email: "",
-              phoneNumber: 0,
+              phone_number: 0,
               gender: "Male",
             });
             setShowModal(true);
@@ -201,7 +245,7 @@ const Students: React.FC = () => {
                 Address
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Birthdate
+                Birth_date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Email
@@ -242,14 +286,14 @@ const Students: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">
-                      {formatDate(student.birthdate)}
+                      {formatDate(student.birth_date)}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-gray-500">{student.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-gray-500">{student.phoneNumber}</div>
+                    <div className="text-gray-500">{student.phone_number}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -295,40 +339,39 @@ const Students: React.FC = () => {
       </div>
 
       {studentToDelete && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-      <div className="border-b px-6 py-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Confirm Deletion
-        </h3>
-      </div>
-      <div className="p-6 space-y-4">
-        <p>
-          Are you sure you want to delete {" "}
-          <span className="font-semibold">{studentToDelete.name}</span>?
-        </p>
-      </div>
-      <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
-        <button
-          onClick={() => setStudentToDelete(null)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => {
-            handleDelete(studentToDelete.id);
-            setStudentToDelete(null);
-          }}
-          className="px-4 py-2 bg-red-600 rounded-md text-sm font-medium text-white hover:bg-red-700"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Confirm Deletion
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p>
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">{studentToDelete.name}</span>?
+              </p>
+            </div>
+            <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+              <button
+                onClick={() => setStudentToDelete(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDelete(studentToDelete.student_id);
+                  setStudentToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 rounded-md text-sm font-medium text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Student Modal */}
       {showModal && (
@@ -347,6 +390,7 @@ const Students: React.FC = () => {
                   Student ID
                 </label>
                 <input
+                  disabled={isEditing}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   id="student_id"
                   name="student_id"
@@ -409,7 +453,7 @@ const Students: React.FC = () => {
                   name="section"
                   type="text"
                   placeholder="Enter student section"
-                  value={formData.name}
+                  value={formData.section}
                   onChange={handleChange}
                   required
                 />
@@ -437,16 +481,16 @@ const Students: React.FC = () => {
               <div className="mb-4">
                 <label
                   className="block text-gray-700 text-sm font-bold mb-2"
-                  htmlFor="birthdate"
+                  htmlFor="birth_date"
                 >
                   Birth Date
                 </label>
                 <input
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  id="birthdate"
-                  name="birthdate"
+                  id="birth_date"
+                  name="birth_date"
                   type="date"
-                  value={formData.birthdate}
+                  value={formData.birth_date}
                   onChange={handleChange}
                   required
                 />
@@ -474,17 +518,17 @@ const Students: React.FC = () => {
               <div className="mb-4">
                 <label
                   className="block text-gray-700 text-sm font-bold mb-2"
-                  htmlFor="phoneNumber"
+                  htmlFor="phone_number"
                 >
                   Phone Number
                 </label>
                 <input
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="number"
+                  id="phone_number"
+                  name="phone_number"
+                  type="text"
                   placeholder="Enter student phone number"
-                  value={formData.phoneNumber}
+                  value={formData.phone_number}
                   onChange={handleChange}
                   required
                 />

@@ -1,9 +1,13 @@
 from flask import Flask, jsonify, make_response, request
 from Handler.Student_Handler import register_student, get_student, get_all_students, update_student, delete_student
 from Handler.Attendance_Table_Handler import create_attendance_table, get_attendance_table, get_all_attendance_table, delete_attendance_table
+from flask_cors import CORS
 
 app = Flask(__name__)
 
+
+# Enable CORS for all routes
+CORS(app)
 
 #Student API
 @app.route('/register', methods=['POST'])
