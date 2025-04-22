@@ -192,7 +192,7 @@ const Attendance: React.FC = () => {
           </p>
         </div>
         <div className="bg-yellow-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
-          <h3 className="text-sm font-medium text-yellow-700">Not Time Out</h3>
+          <h3 className="text-sm font-medium text-yellow-700">Time Out</h3>
           <p className="text-2xl font-bold text-yellow-900">
             {
               filteredStudents.filter((student) => student.timeOut === null)
