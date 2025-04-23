@@ -9,6 +9,7 @@ interface Student {
   name: string;
   logIn: string;
   logOut: string | null;
+  course: string;
 }
 
 interface Event {
@@ -18,7 +19,7 @@ interface Event {
 }
 
 const Attendance: React.FC = () => {
-  // Sample data for events
+  const [selectedCollege, setSelectedCollege] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
 
   // Sample data for students
@@ -63,11 +64,27 @@ const Attendance: React.FC = () => {
         });
         console.log("Fetched students:", arr);
         setAllStudents(arr);
+        setFilteredStudents(arr);
       }
     );
 
     return () => unsubscribe();
   }, [selectedEventId]);
+
+  const handleCollegeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value;
+    setSelectedCollege(selected);
+
+    if (selected === "All") {
+      setFilteredStudents(allStudents);
+    } else {
+      const filtered = allStudents.filter(
+        (student: Student) =>
+          student.course.trim().toLowerCase() === selected.trim().toLowerCase()
+      );
+      setFilteredStudents(filtered);
+    }
+  };
 
   // Format the time for display
   const formatTime = (timeString: string | null) => {
@@ -81,29 +98,64 @@ const Attendance: React.FC = () => {
         Student Attendance
       </h2>
 
-      {/* Event Filter Dropdown */}
+      {/* Event and Department Filter Dropdowns */}
       <div className="mb-6">
-        <label
-          htmlFor="eventFilter"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Filter by Event:
-        </label>
-        <select
-          id="eventFilter"
-          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={selectedEventId || ""}
-          onChange={handleEventChange}
-        >
-          <option value="" disabled>
-            -- Select an Event --
-          </option>
-          {events.map((event) => (
-            <option key={event.id} value={event.event_date}>
-              {event.event_name}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Event Filter */}
+          <div>
+            <label
+              htmlFor="eventFilter"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Select Event:
+            </label>
+            <select
+              id="eventFilter"
+              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedEventId || ""}
+              onChange={handleEventChange}
+            >
+              <option value="" disabled>
+                -- Select an Event --
+              </option>
+              {events.map((event) => (
+                <option key={event.id} value={event.event_date}>
+                  {event.event_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Department Filter */}
+          <div>
+            <label
+              htmlFor="collegeFilter"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Select Department:
+            </label>
+            <select
+              id="collegeFilter"
+              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedCollege}
+              onChange={handleCollegeChange}
+            >
+              <option value="All">All</option>
+              <option value="College of Computer Studies">
+                College of Computer Studies
+              </option>
+              <option value="College of Hospitality Management">
+                College of Hospitality Management
+              </option>
+              <option value="College of Agri-Business">
+                College of Agri-Business
+              </option>
+              <option value="College of Teachers Education">
+                College of Teachers Education
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Students Table */}
@@ -126,8 +178,8 @@ const Attendance: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {allStudents.length > 0 ? (
-              allStudents.map((student) => (
+            {filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => (
                 <tr
                   key={student.id}
                   className="border-b border-gray-200 hover:bg-gray-50"

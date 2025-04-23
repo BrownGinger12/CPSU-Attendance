@@ -41,7 +41,10 @@ const Students: React.FC = () => {
   const fetchStudents = async () => {
     try {
       const response = await apiClient.get("/students");
-      setStudents(response.data.students.data);
+
+      if (response.data.students.data.length > 0) {
+        setStudents(response.data.students.data);
+      }
       console.log("Fetched students:", response.data.students.data);
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -236,7 +239,7 @@ const Students: React.FC = () => {
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Course
+                Department
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Section
@@ -426,18 +429,32 @@ const Students: React.FC = () => {
                   className="block text-gray-700 text-sm font-bold mb-2"
                   htmlFor="course"
                 >
-                  Course
+                  Department
                 </label>
-                <input
+                <select
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   id="course"
                   name="course"
-                  type="text"
-                  placeholder="Enter student course"
                   value={formData.course}
                   onChange={handleChange}
                   required
-                />
+                >
+                  <option value="" disabled>
+                    -- Select a Department --
+                  </option>
+                  <option value="College of Computer Studies">
+                    College of Computer Studies
+                  </option>
+                  <option value="College of Hospitality Management">
+                    College of Hospitality Management
+                  </option>
+                  <option value="College of Agri-Business">
+                    College of Agri-Business
+                  </option>
+                  <option value="College of Teachers Education">
+                    College of Teachers Education
+                  </option>
+                </select>
               </div>
 
               <div className="mb-4">

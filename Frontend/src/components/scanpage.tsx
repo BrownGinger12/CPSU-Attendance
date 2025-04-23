@@ -32,16 +32,6 @@ interface Student {
 }
 
 function ScanPage() {
-  const user = {
-    contactNo: "",
-    course: "",
-    firstName: "",
-    id: "",
-    lastName: "",
-    middleName: "",
-    status: "",
-  };
-
   const [attDate, setAttDate] = useState("0000-00-00");
   const [students, setStudents] = useState<any[]>([]);
   const [studentData, setStudentData] = useState<Student>({
@@ -206,6 +196,7 @@ function ScanPage() {
           name: studentData.name,
           logIn: getCurrentTime(),
           logOut: "",
+          course: studentData.course,
         });
 
         console.log("New session created for the user.");
