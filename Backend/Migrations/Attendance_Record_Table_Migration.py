@@ -12,6 +12,7 @@ def create_attendance_records_table():
         date_end VARCHAR(10),
         start_time VARCHAR(8),
         end_time VARCHAR(8),
+        expired BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)

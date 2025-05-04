@@ -3,12 +3,36 @@ from Handler.Student_Handler import register_student, get_student, get_all_stude
 from Handler.Attendance_Table_Handler import create_attendance_table, get_attendance_table, get_all_attendance_table, delete_attendance_table
 from Handler.Attendance_Handler import log_attendance, get_all_attendance
 from flask_cors import CORS
+from Model.Attendance import Attendance
+from Model.Attendance_Table import AttendanceTable
+from Model.Student import Student
+from datetime import datetime, timedelta
+import threading
+import time
 
 app = Flask(__name__)
 
-
 # Enable CORS for all routes
 CORS(app)
+
+# Background task to check and delete expired events
+def check_expired_events():
+    while True:
+        try:
+            result = AttendanceTable.mark_expired_events()
+            print(result)
+            if result["statusCode"] == 200 and result["expired_events"]:
+                print(f"Marked events as expired: {', '.join(result['expired_events'])}")
+        except Exception as e:
+            print(f"Error checking expired events: {str(e)}")
+        # Check every hour
+        time.sleep(60)
+
+# Start the background thread when the app starts
+def start_background_task():
+    thread = threading.Thread(target=check_expired_events)
+    thread.daemon = True
+    thread.start()
 
 #Student API
 @app.route('/register', methods=['POST'])
@@ -57,4 +81,5 @@ def get_event_attendance(event_name):
     return get_all_attendance(event_name)
 
 if __name__ == "__main__":
+    start_background_task()
     app.run(debug=True)

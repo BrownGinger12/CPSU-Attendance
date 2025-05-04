@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from Gateway.MySQL_Gateway import query, fetch
 
 class AttendanceTable(BaseModel):
@@ -8,6 +8,7 @@ class AttendanceTable(BaseModel):
     date_end: str = Field(..., description="End date in YYYY-MM-DD format")
     start_time: str = Field(..., description="Start time in HH:MM:SS format")
     end_time: str = Field(..., description="End time in HH:MM:SS format")
+    expired: bool = Field(default=False, description="Whether the event has expired")
     
     def create(self):
         try:
@@ -17,8 +18,8 @@ class AttendanceTable(BaseModel):
                 return {"statusCode": 400, "message": "Attendance Record already exists"}
             
             response = query(
-                "INSERT INTO attendance_records (event_name, date_start, date_end, start_time, end_time) VALUES (%s, %s, %s, %s, %s)",
-                (self.event_name, self.date_start, self.date_end, self.start_time, self.end_time)
+                "INSERT INTO attendance_records (event_name, date_start, date_end, start_time, end_time, expired) VALUES (%s, %s, %s, %s, %s, %s)",
+                (self.event_name, self.date_start, self.date_end, self.start_time, self.end_time, self.expired)
             )
 
             if response["statusCode"] == 200:
@@ -38,7 +39,7 @@ class AttendanceTable(BaseModel):
                     return {"statusCode": 500, "message": create_table["message"]}
                 
             if response["statusCode"] != 200:
-                return {"statusCode": 500, "message": response["message"]}
+                return {"statusCode": 500, "message": "Failed to create attendance record"}
             
             return {"statusCode": 200, "message": "Attendance Record created successfully"}
         except Exception as e:
@@ -59,7 +60,6 @@ class AttendanceTable(BaseModel):
                     
                 if delete_table["statusCode"] != 200:
                     return {"statusCode": 500, "message": "Failed to delete records table"}
-
 
             if response["statusCode"] != 200:
                 return {"statusCode": 500, "message": "Failed to delete attendance record"}
@@ -89,5 +89,74 @@ class AttendanceTable(BaseModel):
                 return {"statusCode": 404, "message": "Table not found"}
             
             return {"statusCode": 200, "data": response}
+        except Exception as e:
+            return {"statusCode": 500, "message": str(e)}
+
+    @staticmethod
+    def check_and_delete_expired_events():
+        try:
+            # Get current date and time
+            now = datetime.now()
+            current_date = now.strftime("%Y-%m-%d")
+            current_time = now.strftime("%H:%M:%S")
+
+            # Get all events
+            events = AttendanceTable.get_all()
+            if events["statusCode"] != 200:
+                return {"statusCode": 500, "message": "Failed to get events"}
+
+            deleted_events = []
+            for event in events["data"]:
+                # Check if event has ended
+                if (event["date_end"] < current_date) or \
+                   (event["date_end"] == current_date and event["end_time"] <= current_time):
+                    # Delete the event and its attendance table
+                    result = AttendanceTable.delete(event["event_name"])
+                    if result["statusCode"] == 200:
+                        deleted_events.append(event["event_name"])
+
+            return {
+                "statusCode": 200,
+                "message": f"Successfully deleted {len(deleted_events)} expired events",
+                "deleted_events": deleted_events
+            }
+        except Exception as e:
+            return {"statusCode": 500, "message": str(e)}
+
+    @staticmethod
+    def mark_expired_events():
+        try:
+            # Get current date and time
+            now = datetime.now()
+            current_date = now.strftime("%Y-%m-%d")
+            current_time = now.strftime("%H:%M:%S")
+
+            # Get all events
+            events = AttendanceTable.get_all()
+            if events["statusCode"] != 200:
+                return {"statusCode": 500, "message": "Failed to get events"}
+
+            expired_events = []
+            for event in events["data"]:
+                # Format the event's date to ensure consistent format
+                event_date = datetime.strptime(event["date_end"], "%Y-%m-%d").strftime("%Y-%m-%d")
+                
+                # Check if event has ended and is not already marked as expired
+                if not event.get("expired", False) and \
+                   ((event_date < current_date) or \
+                   (event_date == current_date and event["end_time"] <= current_time)):
+                    # Mark the event as expired
+                    result = query(
+                        "UPDATE attendance_records SET expired = TRUE WHERE event_name = %s",
+                        (event["event_name"],)
+                    )
+                    if result["statusCode"] == 200:
+                        expired_events.append(event["event_name"])
+
+            return {
+                "statusCode": 200,
+                "message": f"Successfully marked {len(expired_events)} events as expired",
+                "expired_events": expired_events
+            }
         except Exception as e:
             return {"statusCode": 500, "message": str(e)}
