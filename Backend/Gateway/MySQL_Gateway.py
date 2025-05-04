@@ -48,7 +48,6 @@ def fetch(table: str, conditions: dict = None):
 
         cursor.execute(query, values)
         results = cursor.fetchall()
-
         cursor.close()
         conn.close()
         return results
