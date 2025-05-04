@@ -8,7 +8,10 @@ def create_attendance_records_table():
     CREATE TABLE IF NOT EXISTS attendance_records (
         id INT AUTO_INCREMENT PRIMARY KEY,
         event_name VARCHAR(255),
-        event_date VARCHAR(255),
+        date_start VARCHAR(10),
+        date_end VARCHAR(10),
+        start_time VARCHAR(8),
+        end_time VARCHAR(8),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)

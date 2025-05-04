@@ -4,7 +4,13 @@ from Model.Attendance_Table import AttendanceTable
 
 def create_attendance_table(request):
     try:
-        attendance_table = AttendanceTable(**request.json)
+        attendance_table = AttendanceTable(
+            event_name=request.json.get('event_name'),
+            date_start=request.json.get('date_start'),
+            date_end=request.json.get('date_end'),
+            start_time=request.json.get('start_time'),
+            end_time=request.json.get('end_time')
+        )
 
         response = attendance_table.create()
 
