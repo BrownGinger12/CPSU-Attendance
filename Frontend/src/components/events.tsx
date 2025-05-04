@@ -97,17 +97,9 @@ const Events: React.FC = () => {
   };
 
 
-  const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours);
-    date.setMinutes(minutes);
-    date.setSeconds(0);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return "Not checked out";
+    return timeString;
   };
   
 
