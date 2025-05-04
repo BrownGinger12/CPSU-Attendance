@@ -10,6 +10,7 @@ interface Student {
   logIn: string;
   logOut: string | null;
   course: string;
+  current_date: string;
 }
 
 interface Event {
@@ -33,8 +34,10 @@ const Attendance: React.FC = () => {
 
   // State for selected event
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>("All");
 
   const fetchEvents = async () => {
     try {
@@ -52,8 +55,8 @@ const Attendance: React.FC = () => {
   // Filter students when event selection changes
 
   const getEventById = (id: number): Event | null => {
-    const resp = events.find(event => event.id === id)
-    if (resp) return resp
+    const resp = events.find((event) => event.id === id);
+    if (resp) return resp;
     return null;
   };
 
@@ -61,7 +64,17 @@ const Attendance: React.FC = () => {
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedEventId(value === "" ? null : value);
-    setSelectedEvent(getEventById(parseInt(value)));
+    const event = getEventById(parseInt(value));
+    setSelectedEvent(event);
+
+    if (event) {
+      const dates = getDatesInRange(event.date_start, event.date_end);
+      setAvailableDates(dates);
+      setSelectedDate("All");
+    } else {
+      setAvailableDates([]);
+      setSelectedDate("All");
+    }
   };
 
   useEffect(() => {
@@ -98,6 +111,36 @@ const Attendance: React.FC = () => {
     }
   };
 
+  const getDatesInRange = (start: string, end: string): string[] => {
+    const dateArray: string[] = [];
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    while (startDate <= endDate) {
+      const year = startDate.getFullYear();
+      const month = String(startDate.getMonth() + 1).padStart(2, "0");
+      const day = String(startDate.getDate()).padStart(2, "0");
+      dateArray.push(`${year}-${month}-${day}`);
+      startDate.setDate(startDate.getDate() + 1);
+    }
+
+    return dateArray;
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+
+    if (date === "All") {
+      setFilteredStudents(allStudents);
+    } else {
+      const filtered = allStudents.filter(
+        (student) => currentDate(student.current_date) === date
+      );
+      setFilteredStudents(filtered);
+    }
+  };
+
   // Format the time for display
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -111,6 +154,15 @@ const Attendance: React.FC = () => {
       hour12: true,
     });
   };
+
+  function currentDate(date: string | Date): string {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   return (
     <div className="container mx-auto py-6 px-1">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -174,11 +226,36 @@ const Attendance: React.FC = () => {
               </option>
             </select>
           </div>
+
+          {/* Date Filter */}
+          <div>
+            <label
+              htmlFor="dateFilter"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Select Date:
+            </label>
+            <select
+              id="dateFilter"
+              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedDate}
+              onChange={handleDateChange}
+              disabled={availableDates.length === 0}
+            >
+              <option value="All">All</option>
+              {availableDates.map((date) => (
+                <option key={date} value={date}>
+                  {date}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
       <div className="mb-2 flex gap-4">
         <p className="text-sm font-medium text-gray-700 mb-2">
-          Date Start: {selectedEvent !== null ? selectedEvent?.date_start: "N/A"}
+          Date Start:{" "}
+          {selectedEvent !== null ? selectedEvent?.date_start : "N/A"}
         </p>
         <p className="text-sm font-medium text-gray-700 mb-2">
           Date End: {selectedEvent !== null ? selectedEvent?.date_end : "N/A"}
@@ -186,11 +263,14 @@ const Attendance: React.FC = () => {
       </div>
       <div className="mb-6 flex gap-4">
         <p className="text-sm font-medium text-gray-700 mb-2">
-          Time Start: {selectedEvent !== null ? selectedEvent?.start_time : "N/A"}
+          Time Start:{" "}
+          {selectedEvent !== null ? selectedEvent?.start_time : "N/A"}
         </p>
-        <p className="text-sm font-medium text-gray-700 mb-2">Time End: {selectedEvent !== null ? selectedEvent?.end_time : "N/A"}</p>
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          Time End: {selectedEvent !== null ? selectedEvent?.end_time : "N/A"}
+        </p>
       </div>
-      
+
       {/* Students Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
@@ -208,6 +288,9 @@ const Attendance: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Time Out
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                Date
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -220,7 +303,12 @@ const Attendance: React.FC = () => {
                   <td className="py-3 px-4">{student.id}</td>
                   <td className="py-3 px-4">{student.name}</td>
                   <td className="py-3 px-4">{student.logIn}</td>
-                  <td className="py-3 px-4">{student.logOut && formatTime(student.logOut)}</td>
+                  <td className="py-3 px-4">
+                    {student.logOut && formatTime(student.logOut)}
+                  </td>
+                  <td className="py-3 px-4">
+                    {currentDate(student.current_date)}
+                  </td>
                 </tr>
               ))
             ) : (
