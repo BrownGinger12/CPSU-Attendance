@@ -92,7 +92,7 @@ const Dashboard: React.FC = () => {
       <div className="flex justify-center mb-6">
         <div className="flex flex-wrap justify-center gap-4 w-full max-w-7xl">
           {/* Total Students */}
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-center w-full md:w-1/2 lg:w-1/4">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-center w-full md:flex-1 lg:flex-1">
             <div className="bg-blue-100 p-3 rounded-full mr-4">
               <Users className="text-blue-600" size={24} />
             </div>
@@ -107,7 +107,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Male Students Present */}
-          <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center w-full md:w-1/2 lg:w-1/4">
+          <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center w-full md:flex-1 lg:flex-1">
             <div className="bg-green-100 p-3 rounded-full mr-4">
               <User className="text-green-600" size={24} />
             </div>
@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Female Students Present */}
-          <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 flex items-center w-full md:w-1/2 lg:w-1/4">
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 flex items-center w-full md:flex-1 lg:flex-1">
             <div className="bg-amber-100 p-3 rounded-full mr-4">
               <UserRound className="text-amber-600" size={24} />
             </div>

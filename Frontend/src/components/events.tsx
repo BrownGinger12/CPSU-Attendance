@@ -5,7 +5,10 @@ import { apiClient } from "../client/AxiosClient";
 interface Event {
   id: number;
   event_name: string;
-  event_date: string;
+  date_start: string;
+  date_end: string;
+  start_time: string;
+  end_time: string;
 }
 
 const Events: React.FC = () => {
@@ -14,10 +17,16 @@ const Events: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState<{
     event_name: string;
-    event_date: string;
+    date_start: string; 
+    date_end: string;
+    start_time: string;
+    end_time: string;
   }>({
     event_name: "",
-    event_date: "",
+    date_start: "",
+    date_end: "",
+    start_time: "",
+    end_time: "",
   });
 
   const addEvent = async (event: Event) => {
@@ -45,14 +54,20 @@ const Events: React.FC = () => {
   }, []);
 
   const handleAddEvent = () => {
-    if (newEvent.event_name && newEvent.event_date) {
+    if (newEvent.event_name && newEvent.date_start && newEvent.date_end && newEvent.start_time && newEvent.end_time) {
       const newId =
         events.length > 0
           ? Math.max(...events.map((event) => event.id)) + 1
           : 1;
       setEvents([...events, { id: newId, ...newEvent }]);
       addEvent({ id: newId, ...newEvent });
-      setNewEvent({ event_name: "", event_date: "" });
+      setNewEvent({
+        event_name: "",
+        date_start: "",
+        date_end: "",
+        start_time: "",
+        end_time: "",
+      });
       setIsModalOpen(false);
     }
   };
@@ -81,6 +96,21 @@ const Events: React.FC = () => {
     });
   };
 
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    date.setSeconds(0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+  
+
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
   return (
@@ -105,7 +135,16 @@ const Events: React.FC = () => {
                 Events
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Date of Event
+                Date Start
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                Date End
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                Time Start
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                Time End
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Action
@@ -119,7 +158,10 @@ const Events: React.FC = () => {
                 className="border-b border-gray-200 hover:bg-gray-50"
               >
                 <td className="py-3 px-4">{event.event_name}</td>
-                <td className="py-3 px-4">{formatDate(event.event_date)}</td>
+                <td className="py-3 px-4">{formatDate(event.date_start)}</td>
+                <td className="py-3 px-4">{formatDate(event.date_end)}</td>
+                <td className="py-3 px-4">{formatTime(event.start_time)}</td>
+                <td className="py-3 px-4">{formatTime(event.end_time)}</td>
                 <td className="py-3 px-4">
                   <button
                     onClick={() => setEventToDelete(event)}
@@ -164,15 +206,58 @@ const Events: React.FC = () => {
                   placeholder="Enter event name"
                 />
               </div>
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Event Date
+                  Date Start
                 </label>
                 <input
                   type="date"
-                  value={newEvent.event_date}
+                  value={newEvent.date_start}
                   onChange={(e) =>
-                    setNewEvent({ ...newEvent, event_date: e.target.value })
+                    setNewEvent({ ...newEvent, date_start: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date End
+                </label>
+                <input
+                  type="date"
+                  value={newEvent.date_end}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, date_end: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-hray-700 mb-1">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={newEvent.start_time}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, start_time: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-hray-700 mb-1">
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={newEvent.end_time}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, end_time: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
