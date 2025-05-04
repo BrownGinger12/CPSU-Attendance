@@ -15,7 +15,10 @@ interface Student {
 interface Event {
   id: number;
   event_name: string;
-  event_date: string;
+  date_start: string;
+  date_end: string;
+  start_time: string;
+  end_time: string;
 }
 
 const Attendance: React.FC = () => {
@@ -30,6 +33,8 @@ const Attendance: React.FC = () => {
 
   // State for selected event
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const fetchEvents = async () => {
     try {
@@ -46,10 +51,17 @@ const Attendance: React.FC = () => {
   }, []);
   // Filter students when event selection changes
 
+  const getEventById = (id: number): Event | null => {
+    const resp = events.find(event => event.id === id)
+    if (resp) return resp
+    return null;
+  };
+
   // Handle event selection change
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedEventId(value === "" ? null : value);
+    setSelectedEvent(getEventById(parseInt(value)));
   };
 
   useEffect(() => {
@@ -87,11 +99,18 @@ const Attendance: React.FC = () => {
   };
 
   // Format the time for display
-  const formatTime = (timeString: string | null) => {
-    if (!timeString) return "Not checked out";
-    return timeString;
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    date.setSeconds(0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
-
   return (
     <div className="container mx-auto py-6 px-1">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -99,7 +118,7 @@ const Attendance: React.FC = () => {
       </h2>
 
       {/* Event and Department Filter Dropdowns */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Event Filter */}
           <div>
@@ -119,7 +138,7 @@ const Attendance: React.FC = () => {
                 -- Select an Event --
               </option>
               {events.map((event) => (
-                <option key={event.id} value={event.event_date}>
+                <option key={event.id} value={event.id}>
                   {event.event_name}
                 </option>
               ))}
@@ -157,7 +176,21 @@ const Attendance: React.FC = () => {
           </div>
         </div>
       </div>
-
+      <div className="mb-2 flex gap-4">
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          Date Start: {selectedEvent !== null ? selectedEvent?.date_start: "N/A"}
+        </p>
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          Date End: {selectedEvent !== null ? selectedEvent?.date_end : "N/A"}
+        </p>
+      </div>
+      <div className="mb-6 flex gap-4">
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          Time Start: {selectedEvent !== null ? selectedEvent?.start_time : "N/A"}
+        </p>
+        <p className="text-sm font-medium text-gray-700 mb-2">Time End: {selectedEvent !== null ? selectedEvent?.end_time : "N/A"}</p>
+      </div>
+      
       {/* Students Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
@@ -187,7 +220,7 @@ const Attendance: React.FC = () => {
                   <td className="py-3 px-4">{student.id}</td>
                   <td className="py-3 px-4">{student.name}</td>
                   <td className="py-3 px-4">{student.logIn}</td>
-                  <td className="py-3 px-4">{formatTime(student.logOut)}</td>
+                  <td className="py-3 px-4">{student.logOut && formatTime(student.logOut)}</td>
                 </tr>
               ))
             ) : (
