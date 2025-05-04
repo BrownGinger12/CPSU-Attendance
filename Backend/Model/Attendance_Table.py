@@ -1,23 +1,24 @@
-
 from pydantic import BaseModel, Field
 from datetime import date
 from Gateway.MySQL_Gateway import query, fetch
 
 class AttendanceTable(BaseModel):
     event_name: str = Field(..., min_length=6, description="Event Name cannot be empty")
-    event_date: date = Field(..., description="Date cannot be empty")
+    date_start: str = Field(..., description="Start date in YYYY-MM-DD format")
+    date_end: str = Field(..., description="End date in YYYY-MM-DD format")
+    start_time: str = Field(..., description="Start time in HH:MM:SS format")
+    end_time: str = Field(..., description="End time in HH:MM:SS format")
     
     def create(self):
         try:
-
             checkIfExists = AttendanceTable.get(self.event_name)
 
             if checkIfExists["statusCode"] == 200:
                 return {"statusCode": 400, "message": "Attendance Record already exists"}
             
             response = query(
-                "INSERT INTO attendance_records (event_name, event_date) VALUES (%s, %s)",
-                (self.event_name, self.event_date)
+                "INSERT INTO attendance_records (event_name, date_start, date_end, start_time, end_time) VALUES (%s, %s, %s, %s, %s)",
+                (self.event_name, self.date_start, self.date_end, self.start_time, self.end_time)
             )
 
             if response["statusCode"] == 200:
@@ -26,7 +27,8 @@ class AttendanceTable(BaseModel):
                                     id INT AUTO_INCREMENT PRIMARY KEY,
                                     student_id VARCHAR(255),
                                     name VARCHAR(255),
-                                    login_time VARCHAR(255) NULL,
+                                    login_date VARCHAR(255) NULL,
+                                    login_time VARCHAR(255) NULL,      
                                     logout_time VARCHAR(255) NULL,
                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                 )
@@ -36,7 +38,7 @@ class AttendanceTable(BaseModel):
                     return {"statusCode": 500, "message": create_table["message"]}
                 
             if response["statusCode"] != 200:
-                return {"statusCode": 500, "message": "Failed to create attendance record"}
+                return {"statusCode": 500, "message": response["message"]}
             
             return {"statusCode": 200, "message": "Attendance Record created successfully"}
         except Exception as e:
