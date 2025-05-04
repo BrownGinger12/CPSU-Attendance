@@ -226,12 +226,7 @@ function ScanPage() {
     setSelectedEvent(e.target.value);
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      console.log("Enter key pressed");
-      fetchUserData();
-    }
-  };
+  
 
   return (
     <div className="w-full min-h-screen bg-gray-50">
@@ -343,42 +338,6 @@ function ScanPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Scan Card Section */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-green-800 mb-4">
-                  Scan Card or Input ID
-                </h2>
-                <div className="flex items-center">
-                  <input
-                    type="text"
-                    placeholder="Enter Student ID"
-                    value={rfidUser}
-                    onChange={(e) => setRfid(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    onKeyDown={handleKeyDown}
-                    disabled={!selectedEvent}
-                  />
-                  <button
-                    onClick={fetchUserData}
-                    disabled={!selectedEvent || loading}
-                    className={`ml-2 px-4 py-3 rounded-lg transition-colors ${
-                      !selectedEvent || loading
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700"
-                    }`}
-                  >
-                    {loading ? "Processing..." : "Scan"}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {!selectedEvent
-                    ? "Please select an event first"
-                    : "Press Enter or click Scan to process"}
-                </p>
               </div>
             </div>
           </div>
