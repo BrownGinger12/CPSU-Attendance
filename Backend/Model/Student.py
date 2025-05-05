@@ -34,7 +34,7 @@ class Student(BaseModel):
                         )
 
             if response["statusCode"] != 200:
-                return {"statusCode": 500, "message": "Failed to create student"}
+                return {"statusCode": response["statusCode"], "message": response["message"]}
             
             return {"statusCode": 200, "message": "Student created successfully"}
         except Exception as e:
