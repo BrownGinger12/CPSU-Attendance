@@ -31,7 +31,8 @@ class AttendanceTable(BaseModel):
                                     login_date VARCHAR(255) NULL,
                                     login_time VARCHAR(255) NULL,      
                                     logout_time VARCHAR(255) NULL,
-                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    course VARCHAR(255) NULL
                                 )
                                 """)
                 

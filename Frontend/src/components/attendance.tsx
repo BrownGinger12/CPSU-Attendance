@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "../client/AxiosClient";
-import { collection, onSnapshot } from "firebase/firestore";
-import { firestore } from "../firebase/firebase";
-import Students from "./students";
 
 interface Student {
-  id: string;
+  student_id: string;
   name: string;
-  logIn: string;
-  logOut: string | null;
+  login_time: string;
+  logout_time: string | null;
+  login_date: string;
   course: string;
-  current_date: string;
 }
 
 interface Event {
@@ -23,19 +20,12 @@ interface Event {
 }
 
 const Attendance: React.FC = () => {
-  const [selectedCollege, setSelectedCollege] = useState("");
+  const [selectedCollege, setSelectedCollege] = useState("All");
   const [events, setEvents] = useState<Event[]>([]);
-
-  // Sample data for students
-  const [allStudents, setAllStudents] = useState<Student[]>([]);
-
-  // State for filtered students
+  const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-
-  // State for selected event
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("All");
 
@@ -49,10 +39,27 @@ const Attendance: React.FC = () => {
     }
   };
 
+  const fetchAttendance = async (eventName: string) => {
+    try {
+      const response = await apiClient.get(
+        `/attendance/${eventName.replace(" ", "_")}`
+      );
+      console.log("Attendance response:", response.data);
+      if (response.data.attendance_records) {
+        const attendanceData = response.data.attendance_records || [];
+        setStudents(attendanceData);
+        setFilteredStudents(attendanceData);
+      }
+    } catch (error) {
+      console.error("Error fetching attendance:", error);
+      setStudents([]);
+      setFilteredStudents([]);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
   }, []);
-  // Filter students when event selection changes
 
   const getEventById = (id: number): Event | null => {
     const resp = events.find((event) => event.id === id);
@@ -61,84 +68,96 @@ const Attendance: React.FC = () => {
   };
 
   // Handle event selection change
-  const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleEventChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedEventId(value === "" ? null : value);
     const event = getEventById(parseInt(value));
     setSelectedEvent(event);
 
     if (event) {
-      const dates = getDatesInRange(event.date_start, event.date_end);
+      // Format dates for the date range
+      const startDate = new Date(event.date_start);
+      const endDate = new Date(event.date_end);
+      const dates = getDatesInRange(startDate, endDate);
+      console.log("Available dates:", dates);
       setAvailableDates(dates);
       setSelectedDate("All");
+      await fetchAttendance(event.event_name);
     } else {
       setAvailableDates([]);
       setSelectedDate("All");
+      setStudents([]);
+      setFilteredStudents([]);
     }
   };
 
-  useEffect(() => {
-    if (!selectedEventId) return;
+  const getDatesInRange = (startDate: Date, endDate: Date): string[] => {
+    const dateArray: string[] = [];
+    const currentDate = new Date(startDate);
 
-    const unsubscribe = onSnapshot(
-      collection(firestore, `Events/${selectedEventId}/Attendance`),
-      (snapshot: any) => {
-        const arr: any[] = [];
-        snapshot.docs.forEach((doc: any) => {
-          arr.push({ id: doc.id, ...doc.data() });
-        });
-        console.log("Fetched students:", arr);
-        setAllStudents(arr);
-        setFilteredStudents(arr);
-      }
-    );
+    while (currentDate <= endDate) {
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+      const day = String(currentDate.getDate()).padStart(2, "0");
+      dateArray.push(`${year}-${month}-${day}`);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
 
-    return () => unsubscribe();
-  }, [selectedEventId]);
+    return dateArray;
+  };
 
   const handleCollegeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value;
     setSelectedCollege(selected);
 
-    if (selected === "All") {
-      setFilteredStudents(allStudents);
-    } else {
-      const filtered = allStudents.filter(
-        (student: Student) =>
-          student.course.trim().toLowerCase() === selected.trim().toLowerCase()
+    let filtered = [...students];
+
+    // Apply college filter
+    if (selected !== "All") {
+      filtered = filtered.filter((student) => {
+        // Get the course from the student data
+        const studentCourse = student.course || "";
+        // Compare the courses (case-insensitive)
+        return studentCourse.toLowerCase().includes(selected.toLowerCase());
+      });
+    }
+
+    // Apply date filter
+    if (selectedDate !== "All") {
+      filtered = filtered.filter(
+        (student) => student.login_date === selectedDate
       );
-      setFilteredStudents(filtered);
-    }
-  };
-
-  const getDatesInRange = (start: string, end: string): string[] => {
-    const dateArray: string[] = [];
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    while (startDate <= endDate) {
-      const year = startDate.getFullYear();
-      const month = String(startDate.getMonth() + 1).padStart(2, "0");
-      const day = String(startDate.getDate()).padStart(2, "0");
-      dateArray.push(`${year}-${month}-${day}`);
-      startDate.setDate(startDate.getDate() + 1);
     }
 
-    return dateArray;
+    console.log("Filtered students by college:", filtered);
+    setFilteredStudents(filtered);
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const date = e.target.value;
     setSelectedDate(date);
 
-    if (date === "All") {
-      setFilteredStudents(allStudents);
-    } else {
-      const filtered = allStudents.filter(
-        (student) => currentDate(student.current_date) === date
-      );
-      setFilteredStudents(filtered);
+    let filtered = [...students];
+
+    // Apply college filter
+    if (selectedCollege !== "All") {
+      filtered = filtered.filter((student) => {
+        // Get the course from the student data
+        const studentCourse = student.course || "";
+        // Compare the courses (case-insensitive)
+        return studentCourse
+          .toLowerCase()
+          .includes(selectedCollege.toLowerCase());
+      });
     }
+
+    // Apply date filter
+    if (date !== "All") {
+      filtered = filtered.filter((student) => student.login_date === date);
+    }
+
+    console.log("Filtered students by date:", filtered);
+    setFilteredStudents(filtered);
   };
 
   // Format the time for display
@@ -146,14 +165,6 @@ const Attendance: React.FC = () => {
     if (!timeString) return "Not checked out";
     return timeString;
   };
-
-  function currentDate(date: string | Date): string {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
 
   return (
     <div className="container mx-auto py-6 px-1">
@@ -232,7 +243,7 @@ const Attendance: React.FC = () => {
               className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={selectedDate}
               onChange={handleDateChange}
-              disabled={availableDates.length === 0}
+              disabled={!selectedEvent || availableDates.length === 0}
             >
               <option value="All">All</option>
               {availableDates.map((date) => (
@@ -286,27 +297,25 @@ const Attendance: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => (
+            {filteredStudents && filteredStudents.length > 0 ? (
+              filteredStudents.map((student, index) => (
                 <tr
-                  key={student.id}
+                  key={index}
                   className="border-b border-gray-200 hover:bg-gray-50"
                 >
-                  <td className="py-3 px-4">{student.id}</td>
+                  <td className="py-3 px-4">{student.student_id}</td>
                   <td className="py-3 px-4">{student.name}</td>
-                  <td className="py-3 px-4">{student.logIn}</td>
+                  <td className="py-3 px-4">{student.login_time || "N/A"}</td>
                   <td className="py-3 px-4">
-                    {student.logOut && formatTime(student.logOut)}
+                    {formatTime(student.logout_time)}
                   </td>
-                  <td className="py-3 px-4">
-                    {currentDate(student.current_date)}
-                  </td>
+                  <td className="py-3 px-4">{student.login_date || "N/A"}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="py-6 text-center text-gray-500">
-                  No students found for the selected event
+                <td colSpan={5} className="py-6 text-center text-gray-500">
+                  No students found for the selected filters
                 </td>
               </tr>
             )}
@@ -319,19 +328,22 @@ const Attendance: React.FC = () => {
         <div className="bg-blue-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-blue-700">Total Present</h3>
           <p className="text-2xl font-bold text-blue-900">
-            {allStudents.length}
+            {filteredStudents.length}
           </p>
         </div>
         <div className="bg-green-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-green-700">Time In</h3>
           <p className="text-2xl font-bold text-green-900">
-            {allStudents.length}
+            {filteredStudents.length}
           </p>
         </div>
         <div className="bg-yellow-50 p-4 rounded-lg shadow-sm flex-1 min-w-[200px]">
           <h3 className="text-sm font-medium text-yellow-700">Time Out</h3>
           <p className="text-2xl font-bold text-yellow-900">
-            {allStudents.filter((student) => student.logOut !== "").length}
+            {
+              filteredStudents.filter((student) => student.logout_time !== null)
+                .length
+            }
           </p>
         </div>
       </div>

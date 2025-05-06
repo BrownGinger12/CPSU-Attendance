@@ -1,21 +1,16 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { firestore } from "../firebase/firebase";
 import { apiClient } from "../client/AxiosClient";
+import { io } from "socket.io-client";
 
 interface Event {
   id: number;
   event_name: string;
   event_date: string;
+  date_start: string;
+  date_end: string;
+  start_time: string;
+  end_time: string;
+  expired: boolean;
 }
 
 interface Student {
@@ -62,6 +57,7 @@ function ScanPage() {
   const [selectedEvent, setSelectedEvent] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
+  const [socket, setSocket] = useState<any>(null);
 
   function generateCurrentDate(): string {
     const currentDate = new Date();
@@ -76,13 +72,17 @@ function ScanPage() {
   const fetchEvents = async () => {
     try {
       const response = await apiClient.get("/attendance_records");
-      setEvents(response.data.attendance_record.data);
+      // Filter out expired events
+      const activeEvents = response.data.attendance_record.data.filter(
+        (event: Event) => !event.expired
+      );
+      setEvents(activeEvents);
     } catch (error) {
       console.error("Error fetching events:", error);
     }
   };
 
-  // Fetch available events from Firestore
+  // Fetch available events
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -92,23 +92,90 @@ function ScanPage() {
     setAttDate(generateCurrentDate());
   }, []);
 
-  // Load students whenever the selected event changes
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const newSocket = io(import.meta.env.VITE_API);
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  // Fetch initial attendance data and listen for updates when event changes
   useEffect(() => {
     if (!selectedEvent) return;
+    console.log("Selected Event:", selectedEvent);
 
-    const unsubscribe = onSnapshot(
-      collection(firestore, `Events/${selectedEvent}/Attendance`),
-      (snapshot: any) => {
-        const arr: any[] = [];
-        snapshot.docs.forEach((doc: any) => {
-          arr.push({ id: doc.id, ...doc.data() });
-        });
-        setStudents(arr);
+    // Fetch initial attendance data
+    const fetchAttendance = async () => {
+      try {
+        const response = await apiClient.get(
+          `/attendance/${selectedEvent.replace(" ", "_")}`
+        );
+        console.log("Response:", response.data);
+        if (response.data.attendance_records) {
+          setStudents(response.data.attendance_records);
+          // Update student info with most recent scan
+          if (response.data.attendance_records.length > 0) {
+            const mostRecent = response.data.attendance_records[0];
+            // Fetch complete student data
+            const studentResponse = await apiClient.get(
+              `/student/${mostRecent.student_id}`
+            );
+            if (studentResponse.data.student.data) {
+              setStudentRecentData(studentResponse.data.student.data[0]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching attendance:", error);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [selectedEvent]);
+    fetchAttendance();
+
+    // Set up WebSocket listener for real-time updates
+    if (socket) {
+      const formattedEventName = selectedEvent.replace(" ", "_");
+      console.log("Joining event:", formattedEventName);
+      socket.emit("join_event", formattedEventName);
+
+      socket.on(
+        `attendance_update_${formattedEventName}`,
+        async (data: any) => {
+          console.log("Received attendance update:", data);
+          if (data.attendance_records) {
+            setStudents(data.attendance_records);
+            console.log("Students:", students);
+
+            // Update student info with most recent scan
+            if (data.attendance_records.length > 0) {
+              const mostRecent = data.attendance_records[0];
+              try {
+                // Fetch complete student data
+                const studentResponse = await apiClient.get(
+                  `/student/${mostRecent.student_id}`
+                );
+                if (studentResponse.data.student.data) {
+                  setStudentRecentData(studentResponse.data.student.data[0]);
+                }
+              } catch (error) {
+                console.error("Error fetching student data:", error);
+              }
+            }
+          }
+        }
+      );
+    }
+
+    return () => {
+      if (socket) {
+        const formattedEventName = selectedEvent.replace(" ", "_");
+        socket.off(`attendance_update_${formattedEventName}`);
+      }
+    };
+  }, [socket, selectedEvent]);
 
   const getUserData = async (rfidVal: string) => {
     try {
@@ -150,21 +217,6 @@ function ScanPage() {
     }
   }, [studentData, selectedEvent]);
 
-  const getCurrentTimeString = (): string => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, "0");
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    const seconds = now.getSeconds().toString().padStart(2, "0");
-    return `${hours}${minutes}${seconds}`;
-  };
-
-  const getCurrentTime = (): string => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, "0");
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
-  };
-
   const handleUserLog = async (): Promise<void> => {
     if (!selectedEvent) {
       alert("Please select an event first");
@@ -173,47 +225,32 @@ function ScanPage() {
 
     try {
       setLoading(true);
-      const userRef = collection(
-        firestore,
-        `Events/${selectedEvent}/Attendance`
-      );
-      const userQuery = query(
-        userRef,
-        where("id", "==", studentData.student_id),
-        where("logOut", "==", "")
-      );
-      const querySnapshot = await getDocs(userQuery);
-
-      if (!querySnapshot.empty) {
-        const docRef = querySnapshot.docs[0].ref;
-        await updateDoc(docRef, { logOut: getCurrentTime() });
-        console.log("LogOut timestamp updated for current session.");
-      } else {
-        const customDocId = getCurrentTimeString();
-        const newDocRef = doc(userRef, customDocId);
-        await setDoc(newDocRef, {
-          id: studentData.student_id,
+      const formattedEventName = selectedEvent.replace(" ", "_");
+      const response = await apiClient.post(
+        `/attendance/${formattedEventName}`,
+        {
+          student_id: studentData.student_id,
           name: studentData.name,
-          logIn: getCurrentTime(),
-          logOut: "",
-          course: studentData.course,
-        });
+        }
+      );
 
-        console.log("New session created for the user.");
+      if (response.data.statusCode === 200) {
+        setStudentRecentData(studentData);
+        setStudentData({
+          id: 0,
+          student_id: "",
+          name: "",
+          course: "",
+          section: "",
+          address: "",
+          birth_date: "",
+          email: "",
+          phone_number: "",
+          gender: "Male",
+        });
+      } else {
+        alert("Error logging attendance");
       }
-      setStudentRecentData(studentData);
-      setStudentData({
-        id: 0,
-        student_id: "",
-        name: "",
-        course: "",
-        section: "",
-        address: "",
-        birth_date: "",
-        email: "",
-        phone_number: "",
-        gender: "Male",
-      });
     } catch (error) {
       console.error("Error handling user log:", error);
       alert("Error logging attendance");
@@ -225,8 +262,6 @@ function ScanPage() {
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedEvent(e.target.value);
   };
-
-  
 
   return (
     <div className="w-full min-h-screen bg-gray-50">
@@ -258,12 +293,12 @@ function ScanPage() {
                   disabled={loading || events.length === 0}
                 >
                   {events.length === 0 ? (
-                    <option value="">No events available</option>
+                    <option value="">No active events available</option>
                   ) : (
                     <>
                       <option value="">Select an event</option>
                       {events.map((event) => (
-                        <option key={event.id} value={event.event_date}>
+                        <option key={event.id} value={event.event_name}>
                           {event.event_name}
                         </option>
                       ))}
@@ -390,20 +425,20 @@ function ScanPage() {
                               }
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {data.id}
+                                {data.student_id}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {data.name}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                  {data.logIn}
+                                  {data.login_time}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {data.logOut ? (
+                                {data.logout_time ? (
                                   <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    {data.logOut}
+                                    {data.logout_time}
                                   </span>
                                 ) : (
                                   <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
