@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import threading
 import time
 from flask_socketio import SocketIO, emit
+import socket
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -107,5 +108,11 @@ def get_event_attendance(event_name):
     return get_all_attendance(event_name)
 
 if __name__ == "__main__":
+    # Get local IP address
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    print(f"\nServer running at: http://{local_ip}:8000")
+    print("Press Ctrl+C to stop the server\n")
+    
     start_background_task()
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host='0.0.0.0', port=8000)
